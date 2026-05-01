@@ -92,7 +92,11 @@ def normalize_output(results: list[ProviderResult], number: str) -> Dict[str, An
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Phone OSINT público (legal)")
-    p.add_argument("number", help="Número en formato internacional (ej. +34600111222)")
+    p.add_argument(
+        "number",
+        nargs="?",
+        help="Número en formato internacional (ej. +34600111222). Si se omite, se pedirá por consola.",
+    )
     p.add_argument(
         "--provider",
         choices=["all", "numverify", "abstract", "apilayer"],
@@ -106,7 +110,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    number = args.number.strip()
+    if args.number:
+        number = args.number.strip()
+    else:
+        number = input("Ingresa el número telefónico (formato internacional, ej. +34600111222): ").strip()
+
     if not number:
         print("Error: number vacío", file=sys.stderr)
         return 2

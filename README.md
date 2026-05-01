@@ -21,5 +21,10 @@ python3 phone_intel_cli.py +573001234567 --provider numverify --country-code CO 
 python3 phone_intel_cli.py +573001234567 --provider apilayer --pretty
 ```
 
+También puedes ejecutarlo sin argumento y te pedirá el número por consola:
+```bash
+python3 phone_intel_cli.py --pretty
+```
+
 ## Nota
 Esta herramienta consulta fuentes públicas/API y no debe usarse para acoso, doxxing ni vigilancia sin autorización.
