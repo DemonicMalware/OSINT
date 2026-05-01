@@ -57,6 +57,21 @@ def resolve_env_file(cli_env_file: str) -> str:
     return str(path)
 
 
+def mask_secret(value: str) -> str:
+    if len(value) <= 6:
+        return '*' * len(value)
+    return value[:3] + '*' * (len(value) - 6) + value[-3:]
+
+
+def config_diagnostics(env_file: str) -> str:
+    lines = [f"Archivo de configuración cargado: {env_file}"]
+    for key in ENV_KEYS:
+        raw = os.getenv(key, "")
+        state = mask_secret(raw) if raw else "NO CONFIGURADA"
+        lines.append(f"- {key}: {state}")
+    return "\n".join(lines)
+
+
 def http_get_json(url: str, timeout: int = 20) -> tuple[int, Dict[str, Any]]:
     req = urllib.request.Request(url, method="GET")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -146,12 +161,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pretty", action="store_true", help="(Solo JSON) Imprime JSON con indentación")
     p.add_argument("--json", action="store_true", help="Salida en JSON en vez de reporte tabulado")
     p.add_argument("--env-file", default=".env", help="Ruta a .env (default: .env)")
+    p.add_argument("--doctor", action="store_true", help="Muestra diagnóstico de carga de keys y sale")
     return p
 
 
 def main() -> int:
     args = build_parser().parse_args()
-    load_local_env(resolve_env_file(args.env_file))
+    resolved_env = resolve_env_file(args.env_file)
+    load_local_env(resolved_env)
+
+    if args.doctor:
+        print(config_diagnostics(resolved_env))
+        return 0
     number = args.number.strip() if args.number else input("Ingresa el número telefónico: ").strip()
     if not number:
         print("Error: number vacío", file=sys.stderr)
@@ -175,7 +196,8 @@ def main() -> int:
                 results.append(query_apilayer_number_verification(number, key))
 
     if not results:
-        print("No hay proveedores configurados. Revisa .env/.env.example o usa --env-file.", file=sys.stderr)
+        print("No hay proveedores configurados. Revisa .env/.env.example, guarda el archivo y verifica con --doctor.", file=sys.stderr)
+        print(config_diagnostics(resolved_env), file=sys.stderr)
         return 2
 
     if args.json:

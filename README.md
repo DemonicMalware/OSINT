@@ -25,3 +25,11 @@ Por defecto la salida es legible y separada por bloques:
 ```bash
 python3 phone_intel_cli.py +34610898074 --json --pretty
 ```
+
+
+## Diagnóstico rápido
+Si aparece "No hay proveedores configurados", ejecuta:
+```bash
+python3 phone_intel_cli.py --doctor
+```
+Te mostrará qué archivo cargó (`.env` o `.env.example`) y si cada key fue detectada.
