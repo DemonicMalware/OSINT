@@ -11,7 +11,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Optional
+
+ENV_KEYS = (
+    "NUMVERIFY_API_KEY",
+    "ABSTRACT_API_KEY",
+    "APILAYER_NUMBER_VERIFICATION_API_KEY",
+)
 
 
 @dataclass
@@ -21,6 +28,21 @@ class ProviderResult:
     status: int
     payload: Dict[str, Any]
     error: Optional[str] = None
+
+
+def load_local_env(filepath: str = ".env") -> None:
+    path = Path(filepath)
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and value and key in ENV_KEYS and not os.getenv(key):
+            os.environ[key] = value
 
 
 def http_get_json(url: str, timeout: int = 20) -> tuple[int, Dict[str, Any]]:
@@ -105,11 +127,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--country-code", help="Código de país ISO-2 para Numverify (opcional)")
     p.add_argument("--pretty", action="store_true", help="Imprime JSON con indentación")
+    p.add_argument(
+        "--env-file",
+        default=".env",
+        help="Ruta a archivo .env con API keys (default: .env)",
+    )
     return p
 
 
 def main() -> int:
     args = build_parser().parse_args()
+    load_local_env(args.env_file)
+
     if args.number:
         number = args.number.strip()
     else:
@@ -147,7 +176,8 @@ def main() -> int:
 
     if not results:
         print(
-            "No hay proveedores configurados. Define NUMVERIFY_API_KEY, ABSTRACT_API_KEY y/o APILAYER_NUMBER_VERIFICATION_API_KEY.",
+            "No hay proveedores configurados. Crea un archivo .env o define variables: "
+            "NUMVERIFY_API_KEY, ABSTRACT_API_KEY y/o APILAYER_NUMBER_VERIFICATION_API_KEY.",
             file=sys.stderr,
         )
         return 2
