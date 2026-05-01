@@ -20,6 +20,8 @@ ENV_KEYS = (
     "APILAYER_NUMBER_VERIFICATION_API_KEY",
 )
 
+PROVIDER_ORDER = ["apilayer", "abstract", "numverify"]
+
 
 @dataclass
 class ProviderResult:
@@ -45,16 +47,15 @@ def load_local_env(filepath: str = ".env") -> None:
             os.environ[key] = value
 
 
-
-
 def resolve_env_file(cli_env_file: str) -> str:
     path = Path(cli_env_file)
     if path.exists():
         return str(path)
-    fallback = Path('.env.example')
-    if cli_env_file == '.env' and fallback.exists():
+    fallback = Path(".env.example")
+    if cli_env_file == ".env" and fallback.exists():
         return str(fallback)
     return str(path)
+
 
 def http_get_json(url: str, timeout: int = 20) -> tuple[int, Dict[str, Any]]:
     req = urllib.request.Request(url, method="GET")
@@ -88,20 +89,12 @@ def query_numverify(number: str, api_key: str, country_code: Optional[str] = Non
 
 def query_abstract_phone(number: str, api_key: str) -> ProviderResult:
     query = urllib.parse.urlencode({"api_key": api_key, "phone": number})
-    return provider_result(
-        "abstract_phone_intelligence",
-        number,
-        f"https://phonevalidation.abstractapi.com/v1/?{query}",
-    )
+    return provider_result("abstract_phone_intelligence", number, f"https://phonevalidation.abstractapi.com/v1/?{query}")
 
 
 def query_apilayer_number_verification(number: str, api_key: str) -> ProviderResult:
     query = urllib.parse.urlencode({"apikey": api_key, "number": number})
-    return provider_result(
-        "apilayer_number_verification",
-        number,
-        f"https://api.apilayer.com/number_verification/validate?{query}",
-    )
+    return provider_result("apilayer_number_verification", number, f"https://api.apilayer.com/number_verification/validate?{query}")
 
 
 def normalize_output(results: list[ProviderResult], number: str) -> Dict[str, Any]:
@@ -117,84 +110,79 @@ def normalize_output(results: list[ProviderResult], number: str) -> Dict[str, An
             }
             for r in results
         ],
-        "compliance": {
-            "notice": "Uso exclusivo con base legal y para finalidades legítimas."
-        },
+        "compliance": {"notice": "Uso exclusivo con base legal y para finalidades legítimas."},
     }
+
+
+def format_provider_block(result: ProviderResult) -> str:
+    lines = []
+    title = result.provider.upper()
+    lines.append(f"\n{'=' * 20} {title} {'=' * 20}")
+    lines.append(f"Estado: {'OK' if result.ok else 'ERROR'}")
+    lines.append(f"HTTP: {result.status}")
+    if result.error:
+        lines.append(f"Error: {result.error}")
+
+    for key in sorted(result.payload.keys()):
+        value = result.payload[key]
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value, ensure_ascii=False)
+        lines.append(f"{key:<24}: {value}")
+    return "\n".join(lines)
+
+
+def format_human_report(results: list[ProviderResult], number: str) -> str:
+    header = [f"Número consultado: {number}", "Resultados por proveedor:"]
+    body = [format_provider_block(r) for r in results]
+    footer = ["\nNota legal: uso exclusivo con base legal y finalidades legítimas."]
+    return "\n".join(header + body + footer)
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Phone OSINT público (legal)")
-    p.add_argument(
-        "number",
-        nargs="?",
-        help="Número en formato internacional (ej. +34600111222). Si se omite, se pedirá por consola.",
-    )
-    p.add_argument(
-        "--provider",
-        choices=["all", "numverify", "abstract", "apilayer"],
-        default="all",
-        help="Proveedor a consultar",
-    )
-    p.add_argument("--country-code", help="Código de país ISO-2 para Numverify (opcional)")
-    p.add_argument("--pretty", action="store_true", help="Imprime JSON con indentación")
-    p.add_argument(
-        "--env-file",
-        default=".env",
-        help="Ruta a archivo .env con API keys (default: .env)",
-    )
+    p.add_argument("number", nargs="?", help="Número internacional. Si se omite, se pedirá por consola.")
+    p.add_argument("--provider", choices=["all", "numverify", "abstract", "apilayer"], default="all")
+    p.add_argument("--country-code", help="Código ISO-2 para Numverify (opcional)")
+    p.add_argument("--pretty", action="store_true", help="(Solo JSON) Imprime JSON con indentación")
+    p.add_argument("--json", action="store_true", help="Salida en JSON en vez de reporte tabulado")
+    p.add_argument("--env-file", default=".env", help="Ruta a .env (default: .env)")
     return p
 
 
 def main() -> int:
     args = build_parser().parse_args()
     load_local_env(resolve_env_file(args.env_file))
-
-    if args.number:
-        number = args.number.strip()
-    else:
-        number = input("Ingresa el número telefónico (formato internacional, ej. +34600111222): ").strip()
-
+    number = args.number.strip() if args.number else input("Ingresa el número telefónico: ").strip()
     if not number:
         print("Error: number vacío", file=sys.stderr)
         return 2
 
     results: list[ProviderResult] = []
 
-    if args.provider in {"all", "numverify"}:
-        key = os.getenv("NUMVERIFY_API_KEY")
-        if key:
-            results.append(query_numverify(number, key, args.country_code))
-        elif args.provider == "numverify":
-            print("Falta NUMVERIFY_API_KEY", file=sys.stderr)
-            return 2
-
-    if args.provider in {"all", "abstract"}:
-        key = os.getenv("ABSTRACT_API_KEY")
-        if key:
-            results.append(query_abstract_phone(number, key))
-        elif args.provider == "abstract":
-            print("Falta ABSTRACT_API_KEY", file=sys.stderr)
-            return 2
-
-    if args.provider in {"all", "apilayer"}:
-        key = os.getenv("APILAYER_NUMBER_VERIFICATION_API_KEY")
-        if key:
-            results.append(query_apilayer_number_verification(number, key))
-        elif args.provider == "apilayer":
-            print("Falta APILAYER_NUMBER_VERIFICATION_API_KEY", file=sys.stderr)
-            return 2
+    providers = [args.provider] if args.provider != "all" else PROVIDER_ORDER
+    for provider in providers:
+        if provider == "numverify":
+            key = os.getenv("NUMVERIFY_API_KEY")
+            if key:
+                results.append(query_numverify(number, key, args.country_code))
+        elif provider == "abstract":
+            key = os.getenv("ABSTRACT_API_KEY")
+            if key:
+                results.append(query_abstract_phone(number, key))
+        elif provider == "apilayer":
+            key = os.getenv("APILAYER_NUMBER_VERIFICATION_API_KEY")
+            if key:
+                results.append(query_apilayer_number_verification(number, key))
 
     if not results:
-        print(
-            "No hay proveedores configurados. Usa .env (o --env-file), y en VS Code evita dejar claves solo en .env.example. "
-            "Define NUMVERIFY_API_KEY, ABSTRACT_API_KEY y/o APILAYER_NUMBER_VERIFICATION_API_KEY.",
-            file=sys.stderr,
-        )
+        print("No hay proveedores configurados. Revisa .env/.env.example o usa --env-file.", file=sys.stderr)
         return 2
 
-    output = normalize_output(results, number)
-    print(json.dumps(output, ensure_ascii=False, indent=2 if args.pretty else None))
+    if args.json:
+        output = normalize_output(results, number)
+        print(json.dumps(output, ensure_ascii=False, indent=2 if args.pretty else None))
+    else:
+        print(format_human_report(results, number))
     return 0
 
 
