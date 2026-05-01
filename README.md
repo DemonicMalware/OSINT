@@ -58,3 +58,7 @@ También puedes consultar solo ese proveedor:
 ```bash
 python3 phone_intel_cli.py +34610898074 --provider veriphone
 ```
+
+
+### Visibilidad de proveedores sin key
+Si falta la key de un proveedor, ahora también aparecerá en el reporte con `Estado: ERROR` y el campo `missing_env`, para que veas claramente qué configuración falta (por ejemplo, `VERIPHONE_API_KEY`).

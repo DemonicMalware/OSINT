@@ -18,9 +18,10 @@ ENV_KEYS = (
     "NUMVERIFY_API_KEY",
     "ABSTRACT_API_KEY",
     "APILAYER_NUMBER_VERIFICATION_API_KEY",
+    "VERIPHONE_API_KEY",
 )
 
-PROVIDER_ORDER = ["apilayer", "abstract", "numverify"]
+PROVIDER_ORDER = ["apilayer", "veriphone", "abstract", "numverify"]
 
 
 @dataclass
@@ -107,11 +108,29 @@ def query_abstract_phone(number: str, api_key: str) -> ProviderResult:
     return provider_result("abstract_phone_intelligence", number, f"https://phonevalidation.abstractapi.com/v1/?{query}")
 
 
+
+
+def query_veriphone(number: str, api_key: str) -> ProviderResult:
+    query = urllib.parse.urlencode({"phone": number, "key": api_key})
+    return provider_result("veriphone", number, f"https://api.veriphone.io/v2/verify?{query}")
+
 def query_apilayer_number_verification(number: str, api_key: str) -> ProviderResult:
     query = urllib.parse.urlencode({"apikey": api_key, "number": number})
     return provider_result("apilayer_number_verification", number, f"https://api.apilayer.com/number_verification/validate?{query}")
 
 
+
+
+
+
+def missing_key_result(provider: str, number: str, env_var: str) -> ProviderResult:
+    return ProviderResult(
+        provider=provider,
+        ok=False,
+        status=0,
+        payload={"number": number, "missing_env": env_var},
+        error=f"Falta configurar {env_var}",
+    )
 
 
 def derive_geo_hint(payload: Dict[str, Any]) -> Dict[str, str]:
@@ -182,7 +201,7 @@ def format_human_report(results: list[ProviderResult], number: str) -> str:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Phone OSINT público (legal)")
     p.add_argument("number", nargs="?", help="Número internacional. Si se omite, se pedirá por consola.")
-    p.add_argument("--provider", choices=["all", "numverify", "abstract", "apilayer"], default="all")
+    p.add_argument("--provider", choices=["all", "numverify", "abstract", "apilayer", "veriphone"], default="all")
     p.add_argument("--country-code", help="Código ISO-2 para Numverify (opcional)")
     p.add_argument("--pretty", action="store_true", help="(Solo JSON) Imprime JSON con indentación")
     p.add_argument("--json", action="store_true", help="Salida en JSON en vez de reporte tabulado")
@@ -212,14 +231,26 @@ def main() -> int:
             key = os.getenv("NUMVERIFY_API_KEY")
             if key:
                 results.append(query_numverify(number, key, args.country_code))
+            else:
+                results.append(missing_key_result("numverify", number, "NUMVERIFY_API_KEY"))
         elif provider == "abstract":
             key = os.getenv("ABSTRACT_API_KEY")
             if key:
                 results.append(query_abstract_phone(number, key))
+            else:
+                results.append(missing_key_result("abstract_phone_intelligence", number, "ABSTRACT_API_KEY"))
         elif provider == "apilayer":
             key = os.getenv("APILAYER_NUMBER_VERIFICATION_API_KEY")
             if key:
                 results.append(query_apilayer_number_verification(number, key))
+            else:
+                results.append(missing_key_result("apilayer_number_verification", number, "APILAYER_NUMBER_VERIFICATION_API_KEY"))
+        elif provider == "veriphone":
+            key = os.getenv("VERIPHONE_API_KEY")
+            if key:
+                results.append(query_veriphone(number, key))
+            else:
+                results.append(missing_key_result("veriphone", number, "VERIPHONE_API_KEY"))
 
     if not results:
         print("No hay proveedores configurados. Revisa .env/.env.example, guarda el archivo (Ctrl+S en VS Code) y verifica con --doctor.", file=sys.stderr)
