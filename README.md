@@ -6,6 +6,7 @@ CLI para extraer metadatos públicos de números telefónicos desde múltiples A
 - APILayer Number Verification (`APILAYER_NUMBER_VERIFICATION_API_KEY`)
 - Abstract Phone Intelligence (`ABSTRACT_API_KEY`)
 - Numverify (`NUMVERIFY_API_KEY`)
+- Veriphone (`VERIPHONE_API_KEY`)
 
 ## Configuración
 Copia `.env.example` a `.env` y agrega tus keys.
@@ -18,8 +19,9 @@ python3 phone_intel_cli.py +34610898074
 ### Salida por proveedor (ordenada)
 Por defecto la salida es legible y separada por bloques:
 1. APILAYER
-2. ABSTRACT
-3. NUMVERIFY
+2. VERIPHONE
+3. ABSTRACT
+4. NUMVERIFY
 
 ### JSON opcional
 ```bash
@@ -45,3 +47,14 @@ Te mostrará qué archivo cargó (`.env` o `.env.example`) y si cada key fue det
 Sí: el CLI ahora muestra **geolocalización aproximada** por proveedor (`country`, `country_code`, `region_hint`) y un enlace de búsqueda en mapa.
 
 > Importante: no es geolocalización GPS ni tiempo real; depende de metadatos públicos del operador/API.
+
+
+## Veriphone
+Para habilitarlo, agrega en tu archivo de entorno:
+```env
+VERIPHONE_API_KEY=tu_key
+```
+También puedes consultar solo ese proveedor:
+```bash
+python3 phone_intel_cli.py +34610898074 --provider veriphone
+```
