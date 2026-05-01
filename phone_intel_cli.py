@@ -196,7 +196,7 @@ def main() -> int:
                 results.append(query_apilayer_number_verification(number, key))
 
     if not results:
-        print("No hay proveedores configurados. Revisa .env/.env.example, guarda el archivo y verifica con --doctor.", file=sys.stderr)
+        print("No hay proveedores configurados. Revisa .env/.env.example, guarda el archivo (Ctrl+S en VS Code) y verifica con --doctor.", file=sys.stderr)
         print(config_diagnostics(resolved_env), file=sys.stderr)
         return 2
 

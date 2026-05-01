@@ -33,3 +33,9 @@ Si aparece "No hay proveedores configurados", ejecuta:
 python3 phone_intel_cli.py --doctor
 ```
 Te mostrará qué archivo cargó (`.env` o `.env.example`) y si cada key fue detectada.
+
+
+### Si en VS Code sigue diciendo "NO CONFIGURADA"
+1. Guarda el archivo con **Ctrl+S** (en tu captura aparece `1 unsaved`).
+2. Verifica que estés editando el archivo dentro de la misma carpeta desde donde ejecutas Python.
+3. Ejecuta: `python3 phone_intel_cli.py --doctor`
