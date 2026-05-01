@@ -112,6 +112,25 @@ def query_apilayer_number_verification(number: str, api_key: str) -> ProviderRes
     return provider_result("apilayer_number_verification", number, f"https://api.apilayer.com/number_verification/validate?{query}")
 
 
+
+
+def derive_geo_hint(payload: Dict[str, Any]) -> Dict[str, str]:
+    country = str(payload.get("country_name", "") or "").strip()
+    country_code = str(payload.get("country_code", "") or "").strip()
+    region = str(payload.get("location", "") or "").strip()
+    if not country and not region:
+        return {}
+
+    query = ", ".join([part for part in [region, country] if part])
+    maps_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(query)}" if query else ""
+    return {
+        "country": country,
+        "country_code": country_code,
+        "region_hint": region,
+        "maps_search_url": maps_url,
+    }
+
+
 def normalize_output(results: list[ProviderResult], number: str) -> Dict[str, Any]:
     return {
         "query_number": number,
@@ -122,6 +141,7 @@ def normalize_output(results: list[ProviderResult], number: str) -> Dict[str, An
                 "status": r.status,
                 "error": r.error,
                 "data": r.payload,
+                "geo_hint": derive_geo_hint(r.payload),
             }
             for r in results
         ],
@@ -137,6 +157,12 @@ def format_provider_block(result: ProviderResult) -> str:
     lines.append(f"HTTP: {result.status}")
     if result.error:
         lines.append(f"Error: {result.error}")
+
+    geo_hint = derive_geo_hint(result.payload)
+    if geo_hint:
+        lines.append("Geolocalización aproximada (no GPS):")
+        for k, v in geo_hint.items():
+            lines.append(f"  {k:<22}: {v}")
 
     for key in sorted(result.payload.keys()):
         value = result.payload[key]

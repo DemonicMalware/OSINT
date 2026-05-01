@@ -39,3 +39,9 @@ Te mostrará qué archivo cargó (`.env` o `.env.example`) y si cada key fue det
 1. Guarda el archivo con **Ctrl+S** (en tu captura aparece `1 unsaved`).
 2. Verifica que estés editando el archivo dentro de la misma carpeta desde donde ejecutas Python.
 3. Ejecuta: `python3 phone_intel_cli.py --doctor`
+
+
+## Geolocalización
+Sí: el CLI ahora muestra **geolocalización aproximada** por proveedor (`country`, `country_code`, `region_hint`) y un enlace de búsqueda en mapa.
+
+> Importante: no es geolocalización GPS ni tiempo real; depende de metadatos públicos del operador/API.
