@@ -45,6 +45,17 @@ def load_local_env(filepath: str = ".env") -> None:
             os.environ[key] = value
 
 
+
+
+def resolve_env_file(cli_env_file: str) -> str:
+    path = Path(cli_env_file)
+    if path.exists():
+        return str(path)
+    fallback = Path('.env.example')
+    if cli_env_file == '.env' and fallback.exists():
+        return str(fallback)
+    return str(path)
+
 def http_get_json(url: str, timeout: int = 20) -> tuple[int, Dict[str, Any]]:
     req = urllib.request.Request(url, method="GET")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -137,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    load_local_env(args.env_file)
+    load_local_env(resolve_env_file(args.env_file))
 
     if args.number:
         number = args.number.strip()
@@ -176,8 +187,8 @@ def main() -> int:
 
     if not results:
         print(
-            "No hay proveedores configurados. Crea un archivo .env o define variables: "
-            "NUMVERIFY_API_KEY, ABSTRACT_API_KEY y/o APILAYER_NUMBER_VERIFICATION_API_KEY.",
+            "No hay proveedores configurados. Usa .env (o --env-file), y en VS Code evita dejar claves solo en .env.example. "
+            "Define NUMVERIFY_API_KEY, ABSTRACT_API_KEY y/o APILAYER_NUMBER_VERIFICATION_API_KEY.",
             file=sys.stderr,
         )
         return 2

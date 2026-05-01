@@ -37,3 +37,7 @@ python3 phone_intel_cli.py +573001234567 --env-file .env.local --pretty
 
 ## Nota
 Esta herramienta consulta fuentes públicas/API y no debe usarse para acoso, doxxing ni vigilancia sin autorización.
+
+
+## Nota para VS Code
+Si guardaste las claves en `.env.example`, también funciona (fallback automático), pero lo recomendado es renombrarlo a `.env`.
